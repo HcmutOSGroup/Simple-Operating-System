@@ -111,8 +111,10 @@ static void * ld_routine(void * args) {
 	printf("ld_routine\n");
 	while (i < num_processes) {
 		struct pcb_t * proc = load(ld_processes.path[i]);
+		//printf("%d\n",ld_processes.start_time[i]);
 #ifdef MLQ_SCHED
 		proc->prio = ld_processes.prio[i];
+		//proc->prio = proc->priority;
 #endif
 		while (current_time() < ld_processes.start_time[i]) {
 			next_slot(timer_id);
@@ -145,6 +147,7 @@ static void read_config(const char * path) {
 		exit(1);
 	}
 	fscanf(file, "%d %d %d\n", &time_slot, &num_cpus, &num_processes);
+	
 	ld_processes.path = (char**)malloc(sizeof(char*) * num_processes);
 	ld_processes.start_time = (unsigned long*)
 		malloc(sizeof(unsigned long) * num_processes);
@@ -165,11 +168,13 @@ static void read_config(const char * path) {
 	 * Format: (size=0 result non-used memswap, must have RAM and at least 1 SWAP)
 	 *        MEM_RAM_SZ MEM_SWP0_SZ MEM_SWP1_SZ MEM_SWP2_SZ MEM_SWP3_SZ
 	*/
+    
 	fscanf(file, "%d\n", &memramsz);
 	for(sit = 0; sit < PAGING_MAX_MMSWP; sit++)
 		fscanf(file, "%d", &(memswpsz[sit])); 
 
-       fscanf(file, "\n"); /* Final character */
+       fscanf(file, "\n"); // Final character 
+	
 #endif
 #endif
 
@@ -185,10 +190,14 @@ static void read_config(const char * path) {
 		char proc[100];
 #ifdef MLQ_SCHED
 		fscanf(file, "%lu %s %lu\n", &ld_processes.start_time[i], proc, &ld_processes.prio[i]);
+		//printf("%d\n",ld_processes.start_time[i]);
+		//printf("%s\n",proc);
+		//printf("%d\n",ld_processes.prio[i]);
 #else
 		fscanf(file, "%lu %s\n", &ld_processes.start_time[i], proc);
 #endif
 		strcat(ld_processes.path[i], proc);
+		//printf("ld_processes.path[i] = %s\n",proc);
 	}
 }
 
@@ -202,8 +211,10 @@ int main(int argc, char * argv[]) {
 	path[0] = '\0';
 	strcat(path, "input/");
 	strcat(path, argv[1]);
+	//printf("%s\n",path);
+	
 	read_config(path);
-
+	//printf("timeslot = %d\n",time_slot);
 	pthread_t * cpu = (pthread_t*)malloc(num_cpus * sizeof(pthread_t));
 	struct cpu_args * args =
 		(struct cpu_args*)malloc(sizeof(struct cpu_args) * num_cpus);
@@ -268,6 +279,6 @@ int main(int argc, char * argv[]) {
 	stop_timer();
 
 	return 0;
-
+	
 }
 
