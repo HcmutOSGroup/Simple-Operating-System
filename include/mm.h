@@ -1,5 +1,6 @@
 #ifndef MM_H
 
+#include <stdio.h>
 #include "bitops.h"
 #include "common.h"
 
@@ -103,6 +104,7 @@ int __swap_cp_page(struct memphy_struct *mpsrc, int srcfpn,
                 struct memphy_struct *mpdst, int dstfpn) ;
 int pte_set_fpn(uint32_t *pte, int fpn);
 int pte_set_swap(uint32_t *pte, int swptyp, int swpoff);
+int pte_set_swap_alternative(uint32_t *pte, int swpoff);
 int init_pte(uint32_t *pte,
              int pre,    // present
              int fpn,    // FPN

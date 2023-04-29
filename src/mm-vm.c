@@ -130,53 +130,9 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
     return -1;
 
   /* TODO: Manage the collect freed region to freerg_list */
-  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
-  struct vm_rg_struct *rgit = cur_vma->vm_freerg_list;
   struct vm_rg_struct *cur_rg = get_symrg_byid(caller->mm, rgid);
   rgnode.rg_start = cur_rg->rg_start;
   rgnode.rg_end = cur_rg->rg_end;
-  while (rgit != NULL)
-  {
-    // check end
-    if (rgit->rg_start == cur_rg->rg_end + 1)
-    {
-      rgnode.rg_end = rgit->rg_end;
-      struct vm_rg_struct *nextrg = rgit->rg_next;
-      // Clone
-      if (nextrg != NULL)
-      {
-        rgit->rg_start = nextrg->rg_start;
-        rgit->rg_end = nextrg->rg_end;
-        rgit->rg_next = nextrg->rg_next;
-        free(nextrg);
-      }
-      else
-      {
-        rgit->rg_start = rgit->rg_end;
-        rgit->rg_next = NULL;
-      }
-    }
-    // check start
-    else if (rgit->rg_end == cur_rg->rg_start - 1)
-    {
-      rgnode.rg_start = rgit->rg_start;
-      struct vm_rg_struct *nextrg = rgit->rg_next;
-      // Clone
-      if (nextrg != NULL)
-      {
-        rgit->rg_start = nextrg->rg_start;
-        rgit->rg_end = nextrg->rg_end;
-        rgit->rg_next = nextrg->rg_next;
-        free(nextrg);
-      }
-      else
-      {
-        rgit->rg_start = rgit->rg_end;
-        rgit->rg_next = NULL;
-      }
-    }
-    rgit = rgit->rg_next;
-  }
 
   /*enlist the obsoleted memory region */
   enlist_vm_freerg_list(caller->mm, rgnode);
@@ -248,11 +204,21 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 
     /* Update page table */
     // pte_set_swap() &mm->pgd;
-    pte_set_swap(&mm->pgd[swpfpn], 1, 4);
+
+    pte_set_swap_alternative(&mm->pgd[vicpgn], swpfpn);
+    //pte_set_swap(&mm->pgd[vicpgn], swpfpn, swpfpn);
     /* Update its online status of the target page */
     // pte_set_fpn() & mm->pgd[pgn];
-    pte_set_fpn(&pte, tgtfpn);
-
+    pte_set_fpn(&mm->pgd[pgn], vicfpn);
+    
+    //enlist freefp in memphy
+    struct framephy_struct *fp = malloc(sizeof(struct framephy_struct));
+    fp->fpn = tgtfpn;
+    struct framephy_struct *dest = caller->active_mswp->free_fp_list;
+    fp->fp_next = dest;
+    caller->active_mswp->free_fp_list = fp;
+    
+    //enlist fifo traceback node
     enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
   }
 
@@ -450,7 +416,14 @@ struct vm_rg_struct *get_vm_area_node_at_brk(struct pcb_t *caller, int vmaid, in
  */
 int validate_overlap_vm_area(struct pcb_t *caller, int vmaid, int vmastart, int vmaend)
 {
-  // struct vm_area_struct *vma = caller->mm->mmap;
+  struct vm_area_struct *vma = caller->mm->mmap;
+  while (vma)
+  {
+    if ((vmastart >= vma->vm_start && vmastart <= vma->vm_end) || (vmaend >= vma->vm_start && vmaend <= vma->vm_end))
+      return -1;
+
+    vma = vma->vm_next;
+  }
 
   /* TODO validate the planned memory area is not overlapped */
 
@@ -497,9 +470,24 @@ int find_victim_page(struct mm_struct *mm, int *retpgn)
   struct pgn_t *pg = mm->fifo_pgn;
 
   /* TODO: Implement the theorical mechanism to find the victim page */
-
-  free(pg);
-
+  if (!pg)
+    return -1;
+  // 1 node
+  if (pg->pg_next == 0)
+  {
+    *retpgn = pg->pgn;
+    free(pg);
+    mm->fifo_pgn = 0;
+    return 0;
+  }
+  // 2 node
+  while (pg->pg_next != 0 && pg->pg_next->pg_next != 0)
+  {
+    pg = pg->pg_next;
+  }
+  *retpgn = pg->pg_next->pgn;
+  free(pg->pg_next);
+  pg->pg_next = 0;
   return 0;
 }
 
