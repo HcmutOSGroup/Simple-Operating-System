@@ -161,7 +161,7 @@ int MEMPHY_dump(struct memphy_struct *mp)
    /*TODO dump memphy contnt mp->storage
     *     for tracing the memory content
     */
-   printf("Recent updated value: %d\n", mp->storage[mp->cursor]);
+   //printf("Recent updated value: %d\n", mp->storage[mp->cursor]);
 
    return 0;
 }

@@ -83,6 +83,7 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
 
   if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0)
   {
+    // printf("\tgot area\n");
     caller->mm->symrgtbl[rgid].rg_start = rgnode.rg_start;
     caller->mm->symrgtbl[rgid].rg_end = rgnode.rg_end;
 
@@ -110,8 +111,8 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
   caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
   caller->mm->symrgtbl[rgid].rg_end = old_sbrk + size;
 
+  //printf("\tStart: %lu\tEnd: %lu\n", cur_vma->vm_start, cur_vma->vm_end);
   *alloc_addr = old_sbrk;
-
   return 0;
 }
 
@@ -139,7 +140,8 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
   caller->mm->symrgtbl[rgid].rg_start = -1;
   caller->mm->symrgtbl[rgid].rg_end = -1;
   caller->mm->symrgtbl[rgid].rg_next = NULL;
-
+  
+  //printf("\tfreed\n");
   return 0;
 }
 
@@ -206,19 +208,19 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
     // pte_set_swap() &mm->pgd;
 
     pte_set_swap_alternative(&mm->pgd[vicpgn], swpfpn);
-    //pte_set_swap(&mm->pgd[vicpgn], swpfpn, swpfpn);
+    // pte_set_swap(&mm->pgd[vicpgn], swpfpn, swpfpn);
     /* Update its online status of the target page */
     // pte_set_fpn() & mm->pgd[pgn];
     pte_set_fpn(&mm->pgd[pgn], vicfpn);
-    
-    //enlist freefp in memphy
+
+    // enlist freefp in memphy
     struct framephy_struct *fp = malloc(sizeof(struct framephy_struct));
     fp->fpn = tgtfpn;
     struct framephy_struct *dest = caller->active_mswp->free_fp_list;
     fp->fp_next = dest;
     caller->active_mswp->free_fp_list = fp;
-    
-    //enlist fifo traceback node
+
+    // enlist fifo traceback node
     enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
   }
 
@@ -419,7 +421,7 @@ int validate_overlap_vm_area(struct pcb_t *caller, int vmaid, int vmastart, int 
   struct vm_area_struct *vma = caller->mm->mmap;
   while (vma)
   {
-    if ((vmastart >= vma->vm_start && vmastart <= vma->vm_end) || (vmaend >= vma->vm_start && vmaend <= vma->vm_end))
+    if ((vmastart > vma->vm_start && vmastart < vma->vm_end) || (vmaend > vma->vm_start && vmaend < vma->vm_end))
       return -1;
 
     vma = vma->vm_next;
@@ -448,7 +450,9 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, int inc_sz)
 
   /*Validate overlap of obtained region */
   if (validate_overlap_vm_area(caller, vmaid, area->rg_start, area->rg_end) < 0)
+  {
     return -1; /*Overlap and failed allocation */
+  }
 
   /* The obtained vm area (only)
    * now will be alloc real ram region */
@@ -504,7 +508,9 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
   struct vm_rg_struct *rgit = cur_vma->vm_freerg_list;
 
   if (rgit == NULL)
+  {
     return -1;
+  }
 
   /* Probe unintialized newrg */
   newrg->rg_start = newrg->rg_end = -1;
@@ -512,6 +518,7 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
   /* Traverse on list of free vm region to find a fit space */
   while (rgit != NULL)
   {
+    // printf("\tStart: %lu\tEnd: %lu\n", rgit->rg_start, rgit->rg_end);
     if (rgit->rg_start + size <= rgit->rg_end)
     { /* Current region has enough space */
       newrg->rg_start = rgit->rg_start;
@@ -543,6 +550,7 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
           rgit->rg_next = NULL;
         }
       }
+      break;
     }
     else
     {

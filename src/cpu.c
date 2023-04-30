@@ -56,7 +56,7 @@ int run(struct pcb_t * proc) {
 	int stat = 1;
 	switch (ins.opcode) {
 	case CALC:
-		//printf("calculating\n");
+		//printf("\tcalculating\n");
 		stat = calc(proc);
 		break;
 	case ALLOC:
