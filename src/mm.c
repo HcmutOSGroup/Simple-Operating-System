@@ -111,14 +111,15 @@ int vmap_page_range(struct pcb_t *caller,           // process call
    *      [addr to addr + pgnum*PAGING_PAGESZ
    *      in page table caller->mm->pgd[]
    */
-  for (int i = pgn; i < pgn+pgnum; i++)
+  for (int i = pgn; i < pgn + pgnum; i++)
   {
     pte_set_fpn(&caller->mm->pgd[i], frames->fpn);
-    //free
-    frames=frames->fp_next;
+    // free
+    frames = frames->fp_next;
     free(fpit);
-    fpit=frames;
+    fpit = frames;
   }
+  ret_rg->rg_end = ret_rg->rg_start + pgnum * PAGING_PAGESZ;
 
   /* Tracking for later page replacement activities (if needed)
    * Enqueue new usage page */
@@ -140,7 +141,6 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
   int vicfpn, vicpgn;
   uint32_t vicpte;
   // struct framephy_struct *newfp_str;
-
   for (pgit = 0; pgit < req_pgnum; pgit++)
   {
     if (MEMPHY_get_freefp(caller->mram, &fpn) == 0)

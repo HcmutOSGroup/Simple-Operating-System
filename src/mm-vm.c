@@ -14,18 +14,17 @@
  *@rg_elmt: new region
  *
  */
-int enlist_vm_freerg_list(struct mm_struct *mm, struct vm_rg_struct rg_elmt)
+int enlist_vm_freerg_list(struct mm_struct *mm, struct vm_rg_struct* rg_elmt)
 {
-  struct vm_rg_struct *rg_node = mm->mmap->vm_freerg_list;
 
-  if (rg_elmt.rg_start >= rg_elmt.rg_end)
+  if (rg_elmt->rg_start >= rg_elmt->rg_end)
     return -1;
 
-  if (rg_node != NULL)
-    rg_elmt.rg_next = rg_node;
+  if (mm->mmap->vm_freerg_list != NULL)
+    rg_elmt->rg_next = mm->mmap->vm_freerg_list;
 
   /* Enlist the new region */
-  mm->mmap->vm_freerg_list = &rg_elmt;
+  mm->mmap->vm_freerg_list = rg_elmt;
 
   return 0;
 } // them 1 node vao dau list (vm_freerg_list)
@@ -110,8 +109,8 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
   /*Successful increase limit */
   caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
   caller->mm->symrgtbl[rgid].rg_end = old_sbrk + size;
-
-  //printf("\tStart: %lu\tEnd: %lu\n", cur_vma->vm_start, cur_vma->vm_end);
+  //printf("\t%lu %lu\n", caller->mm->symrgtbl[rgid].rg_start, caller->mm->symrgtbl[rgid].rg_end);
+  // printf("\tStart: %lu\tEnd: %lu\n", cur_vma->vm_start, cur_vma->vm_end);
   *alloc_addr = old_sbrk;
   return 0;
 }
@@ -125,23 +124,21 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
  */
 int __free(struct pcb_t *caller, int vmaid, int rgid)
 {
-  struct vm_rg_struct rgnode;
-
   if (rgid < 0 || rgid > PAGING_MAX_SYMTBL_SZ)
     return -1;
-
+  // printf("\t%lu %lu\n",caller->mm->symrgtbl[rgid].rg_start,caller->mm->symrgtbl[rgid].rg_end);
   /* TODO: Manage the collect freed region to freerg_list */
-  struct vm_rg_struct *cur_rg = get_symrg_byid(caller->mm, rgid);
-  rgnode.rg_start = cur_rg->rg_start;
-  rgnode.rg_end = cur_rg->rg_end;
+  struct vm_rg_struct *cur_rg = malloc(sizeof(struct vm_rg_struct));
+  cur_rg->rg_start=caller->mm->symrgtbl[rgid].rg_start;
+  cur_rg->rg_end=caller->mm->symrgtbl[rgid].rg_end;
 
   /*enlist the obsoleted memory region */
-  enlist_vm_freerg_list(caller->mm, rgnode);
+  enlist_vm_freerg_list(caller->mm, cur_rg);
   caller->mm->symrgtbl[rgid].rg_start = -1;
   caller->mm->symrgtbl[rgid].rg_end = -1;
   caller->mm->symrgtbl[rgid].rg_next = NULL;
-  
-  //printf("\tfreed\n");
+
+  // printf("\tfreed\n");
   return 0;
 }
 
@@ -457,6 +454,7 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, int inc_sz)
   /* The obtained vm area (only)
    * now will be alloc real ram region */
   cur_vma->vm_end += inc_sz;
+  cur_vma->sbrk+=inc_sz;
   if (vm_map_ram(caller, area->rg_start, area->rg_end,
                  old_end, incnumpage, newrg) < 0)
     return -1; /* Map the memory to MEMRAM */

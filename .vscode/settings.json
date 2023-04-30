@@ -3,6 +3,7 @@
     "files.associations": {
         "*.tcc": "c",
         "type_traits": "c",
-        "mm.h": "c"
+        "mm.h": "c",
+        "cstdint": "c"
     }
 }
