@@ -164,7 +164,7 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
       pte_set_swap_alternative(&caller->mm->pgd[vicpgn], swpfpn);
       // obtain frame
       struct framephy_struct *cur_fp = malloc(sizeof(struct framephy_struct));
-      cur_fp->fpn = vicpgn;
+      cur_fp->fpn = vicfpn;
       cur_fp->fp_next = *frm_lst;
       *frm_lst = cur_fp;
     }
