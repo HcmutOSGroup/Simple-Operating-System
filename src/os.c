@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 static int time_slot;
 static int num_cpus;
@@ -104,9 +105,15 @@ static void *cpu_routine(void *args)
 			time_left = time_slot;
 		}
 
-		/* Run current process */
+/* Run current process */
+#ifdef DEBUG_MODE
+		printf("\tCPU%d\tProcess: %d step %d:", id, proc->pid, proc->pc);
+#endif
 		run(proc);
 		time_left--;
+#ifdef DEBUG_MODE
+		sleep(0.1);
+#endif
 		next_slot(timer_id);
 	}
 	detach_event(timer_id);
@@ -224,6 +231,7 @@ static void read_config(const char *path)
 
 int main(int argc, char *argv[])
 {
+
 	/* Read config */
 	if (argc != 2)
 	{

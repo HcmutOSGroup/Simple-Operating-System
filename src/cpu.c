@@ -3,84 +3,113 @@
 #include "mem.h"
 #include "mm.h"
 
-int calc(struct pcb_t * proc) {
+int calc(struct pcb_t *proc)
+{
 	return ((unsigned long)proc & 0UL);
 }
 
-int alloc(struct pcb_t * proc, uint32_t size, uint32_t reg_index) {
+int alloc(struct pcb_t *proc, uint32_t size, uint32_t reg_index)
+{
 	addr_t addr = alloc_mem(size, proc);
-	if (addr == 0) {
+	if (addr == 0)
+	{
 		return 1;
-	}else{
+	}
+	else
+	{
 		proc->regs[reg_index] = addr;
 		return 0;
 	}
 }
 
-int free_data(struct pcb_t * proc, uint32_t reg_index) {
+int free_data(struct pcb_t *proc, uint32_t reg_index)
+{
 	return free_mem(proc->regs[reg_index], proc);
 }
 
 int read(
-		struct pcb_t * proc, // Process executing the instruction
-		uint32_t source, // Index of source register
-		uint32_t offset, // Source address = [source] + [offset]
-		uint32_t destination) { // Index of destination register
-	
+	struct pcb_t *proc, // Process executing the instruction
+	uint32_t source,	// Index of source register
+	uint32_t offset,	// Source address = [source] + [offset]
+	uint32_t destination)
+{ // Index of destination register
+
 	BYTE data;
-	if (read_mem(proc->regs[source] + offset, proc,	&data)) {
+	if (read_mem(proc->regs[source] + offset, proc, &data))
+	{
 		proc->regs[destination] = data;
-		return 0;		
-	}else{
+		return 0;
+	}
+	else
+	{
 		return 1;
 	}
 }
 
 int write(
-		struct pcb_t * proc, // Process executing the instruction
-		BYTE data, // Data to be wrttien into memory
-		uint32_t destination, // Index of destination register
-		uint32_t offset) { 	// Destination address =
-					// [destination] + [offset]
+	struct pcb_t *proc,	  // Process executing the instruction
+	BYTE data,			  // Data to be wrttien into memory
+	uint32_t destination, // Index of destination register
+	uint32_t offset)
+{ // Destination address =
+	// [destination] + [offset]
 	return write_mem(proc->regs[destination] + offset, proc, data);
-} 
+}
 
-int run(struct pcb_t * proc) {
+int run(struct pcb_t *proc)
+{
 	/* Check if Program Counter point to the proper instruction */
-	if (proc->pc >= proc->code->size) {
+	if (proc->pc >= proc->code->size)
+	{
 		return 1;
 	}
-	
+
 	struct inst_t ins = proc->code->text[proc->pc];
 	proc->pc++;
 	int stat = 1;
-	switch (ins.opcode) {
+	switch (ins.opcode)
+	{
 	case CALC:
-		stat = calc(proc);
+#ifdef DEBUG_MODE
+		printf("\tCALC\n");
+#endif
+			stat = calc(proc);
 		break;
 	case ALLOC:
+#ifdef DEBUG_MODE
+		printf("\tALLOC\n");
+#endif
 #ifdef MM_PAGING
-		stat = pgalloc(proc, ins.arg_0, ins.arg_1);
+			stat = pgalloc(proc, ins.arg_0, ins.arg_1);
 
 #else
 		stat = alloc(proc, ins.arg_0, ins.arg_1);
 #endif
 		break;
 	case FREE:
+#ifdef DEBUG_MODE
+		printf("\tFREE\n");
+#endif
 #ifdef MM_PAGING
-		stat = pgfree_data(proc, ins.arg_0);
+			stat = pgfree_data(proc, ins.arg_0);
 #else
 		stat = free_data(proc, ins.arg_0);
 #endif
 		break;
 	case READ:
+#ifdef DEBUG_MODE
+		printf("\tREAD\n");
+#endif
 #ifdef MM_PAGING
-		stat = pgread(proc, ins.arg_0, ins.arg_1, ins.arg_2);
+			stat = pgread(proc, ins.arg_0, ins.arg_1, ins.arg_2);
 #else
 		stat = read(proc, ins.arg_0, ins.arg_1, ins.arg_2);
 #endif
 		break;
 	case WRITE:
+#ifdef DEBUG_MODE
+		printf("\tWRITE\n");
+#endif
 #ifdef MM_PAGING
 		stat = pgwrite(proc, ins.arg_0, ins.arg_1, ins.arg_2);
 #else
@@ -91,7 +120,4 @@ int run(struct pcb_t * proc) {
 		stat = 1;
 	}
 	return stat;
-
 }
-
-

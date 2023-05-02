@@ -86,5 +86,13 @@ struct pcb_t {
 
 };
 
+#ifdef FIFO_STRUCT
+struct fifo_list{
+	int pgn;
+	struct pcb_t *caller;
+	struct fifo_list *next_fifo;
+};
+#endif
+
 #endif
 

@@ -136,7 +136,11 @@ struct vm_rg_struct * get_symrg_byid(struct mm_struct* mm, int rgid);
 int validate_overlap_vm_area(struct pcb_t *caller, int vmaid, int vmastart, int vmaend);
 int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_struct *newrg);
 int inc_vma_limit(struct pcb_t *caller, int vmaid, int inc_sz);
+#ifdef FIFO_STRUCT
+int find_victim_page(int *retpgn, struct pcb_t **caller);
+#else
 int find_victim_page(struct mm_struct* mm, int *pgn);
+#endif
 struct vm_area_struct *get_vma_by_num(struct mm_struct *mm, int vmaid);
 
 /* MEM/PHY protypes */
@@ -154,4 +158,10 @@ int print_list_vma(struct vm_area_struct *rg);
 
 int print_list_pgn(struct pgn_t *ip);
 int print_pgtbl(struct pcb_t *ip, uint32_t start, uint32_t end);
+
+#ifdef FIFO_STRUCT
+int enlist_global_fifo(struct pcb_t *caller, int pgn);
+struct fifo_list * get_fifo();
+void set_fifo();
+#endif
 #endif

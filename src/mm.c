@@ -8,6 +8,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifdef FIFO_STRUCT
+#include <pthread.h>
+static pthread_mutex_t fifo_lock;
+static struct fifo_list *global_fifo = 0;
+#endif
 /*
  * init_pte - Initialize PTE entry
  */
@@ -99,10 +104,7 @@ int vmap_page_range(struct pcb_t *caller,           // process call
 {                                                   // no guarantee all given pages are mapped
   // uint32_t * pte = malloc(sizeof(uint32_t));
   struct framephy_struct *fpit;
-  // int  fpn;
-  int pgit = 0;
   int pgn = PAGING_PGN(addr);
-
   ret_rg->rg_end = ret_rg->rg_start = addr; // at least the very first space is usable
 
   fpit = frames;
@@ -118,12 +120,15 @@ int vmap_page_range(struct pcb_t *caller,           // process call
     frames = frames->fp_next;
     free(fpit);
     fpit = frames;
+    /* Tracking for later page replacement activities (if needed)
+     * Enqueue new usage page */
+    enlist_pgn_node(&caller->mm->fifo_pgn, i);
+#ifdef FIFO_STRUCT
+    printf("\tMATCH RAM at frame: %d\n", i);
+    enlist_global_fifo(caller, i);
+#endif
   }
   ret_rg->rg_end = ret_rg->rg_start + pgnum * PAGING_PAGESZ;
-
-  /* Tracking for later page replacement activities (if needed)
-   * Enqueue new usage page */
-  enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
 
   return 0;
 }
@@ -141,6 +146,11 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
   int vicfpn, vicpgn;
   uint32_t vicpte;
   // struct framephy_struct *newfp_str;
+  if (req_pgnum > caller->mram->maxsz)
+  {
+    // not enough RAM
+    return -1;
+  }
   for (pgit = 0; pgit < req_pgnum; pgit++)
   {
     if (MEMPHY_get_freefp(caller->mram, &fpn) == 0)
@@ -153,7 +163,11 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
     else
     { // ERROR CODE of obtaining somes but not enough frames
       // Manage victim
+#ifdef FIFO_STRUCT
+      find_victim_page(&vicpgn, &caller);
+#else
       find_victim_page(caller->mm, &vicpgn);
+#endif
       vicpte = caller->mm->pgd[vicpgn];
       vicfpn = PAGING_FPN(vicpte);
       // Manage frame in swap
@@ -169,7 +183,6 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
       *frm_lst = cur_fp;
     }
   }
-
   return 0;
 }
 
@@ -198,7 +211,6 @@ int vm_map_ram(struct pcb_t *caller, int astart, int aend, int mapstart, int inc
 
   if (ret_alloc < 0 && ret_alloc != -3000)
     return -1;
-
   /* Out of memory */
   if (ret_alloc == -3000)
   {
@@ -292,7 +304,15 @@ int enlist_pgn_node(struct pgn_t **plist, int pgn)
   pnode->pgn = pgn;
   pnode->pg_next = *plist;
   *plist = pnode;
-
+  // #ifdef DEBUG_MODE
+  //   printf("\tEnlist %d\tList:", pgn);
+  //   struct pgn_t *it=*plist;
+  //   while(it){
+  //     printf("\t%d",it->pgn);
+  //     it=it->pg_next;
+  //   }
+  //   printf("\n");
+  // #endif
   return 0;
 }
 
@@ -404,4 +424,25 @@ int print_pgtbl(struct pcb_t *caller, uint32_t start, uint32_t end)
   return 0;
 }
 
+#ifdef FIFO_STRUCT
+int enlist_global_fifo(struct pcb_t *caller, int pgn)
+{
+  struct fifo_list *temp = malloc(sizeof(struct fifo_list));
+  temp->caller = caller;
+  temp->pgn = pgn;
+  pthread_mutex_lock(&fifo_lock);
+  temp->next_fifo = global_fifo;
+  global_fifo = temp;
+  pthread_mutex_unlock(&fifo_lock);
+  return 0;
+}
+struct fifo_list *get_fifo()
+{
+  return global_fifo;
+}
+void set_fifo()
+{
+  global_fifo = 0;
+}
+#endif
 // #endif
