@@ -12,7 +12,7 @@
 #define PAGETBL_DUMP 1
 
 //MY CODE
-#define DEBUG_MODE 
+// #define DEBUG_MODE 
 #define FIFO_STRUCT
 
 #endif
