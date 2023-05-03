@@ -116,6 +116,9 @@ int vmap_page_range(struct pcb_t *caller,           // process call
   {
     pte_set_fpn(&caller->mm->pgd[i], frames->fpn);
     // free
+#ifdef DEBUG_MODE
+    printf("\tMATCH RAM at: %d\n", frames->fpn);
+#endif
     frames = frames->fp_next;
     free(fpit);
     fpit = frames;

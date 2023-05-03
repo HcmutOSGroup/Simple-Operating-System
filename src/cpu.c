@@ -77,7 +77,7 @@ int run(struct pcb_t *proc)
 		break;
 	case ALLOC:
 #ifdef DEBUG_MODE
-		printf("\tALLOC\n");
+		printf("\tALLOC %d\n",ins.arg_0);
 #endif
 #ifdef MM_PAGING
 			stat = pgalloc(proc, ins.arg_0, ins.arg_1);
