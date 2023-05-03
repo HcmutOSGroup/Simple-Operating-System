@@ -112,6 +112,13 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
   /*Successful increase limit */
   caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
   caller->mm->symrgtbl[rgid].rg_end = old_sbrk + size;
+  if (size < inc_sz)
+  {
+    struct vm_rg_struct *cur_rg = malloc(sizeof(struct vm_rg_struct));
+    cur_rg->rg_start = old_sbrk + size;
+    cur_rg->rg_end = old_sbrk + inc_sz;
+    enlist_vm_freerg_list(caller->mm, cur_rg);
+  }
   // printf("\t%lu %lu\n", caller->mm->symrgtbl[rgid].rg_start, caller->mm->symrgtbl[rgid].rg_end);
   //  printf("\tStart: %lu\tEnd: %lu\n", cur_vma->vm_start, cur_vma->vm_end);
   *alloc_addr = old_sbrk;
@@ -140,6 +147,7 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
 
   /*enlist the obsoleted memory region */
   enlist_vm_freerg_list(caller->mm, cur_rg);
+
   caller->mm->symrgtbl[rgid].rg_start = -1;
   caller->mm->symrgtbl[rgid].rg_end = -1;
   caller->mm->symrgtbl[rgid].rg_next = NULL;
@@ -502,6 +510,13 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, int inc_sz)
 int find_victim_page(int *retpgn, struct pcb_t **caller)
 {
   struct fifo_list *temp = get_fifo();
+  // THIS IS FOR TEST GET VICTIM LIST
+  // printf("\tVictim list: ");
+  // while(temp){
+  //   printf("\tpid: %d, fpn: %d",temp->caller->pid, temp->pgn);
+  //   temp=temp->next_fifo;
+  // }
+  // temp=get_fifo();
   if (temp == NULL)
   {
     return -1;
@@ -521,7 +536,7 @@ int find_victim_page(int *retpgn, struct pcb_t **caller)
   *retpgn = temp->next_fifo->pgn;
   *caller = temp->next_fifo->caller;
   free(temp->next_fifo);
-  temp->next_fifo = 0;
+  temp->next_fifo = NULL;
   return 0;
 }
 #else

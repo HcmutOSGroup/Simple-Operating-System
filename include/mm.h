@@ -55,7 +55,7 @@
 #define PAGING_ADDR_PGN_HIBIT (PAGING_CPU_BUS_WIDTH - 1)
 
 /* Frame PHY Num */
-#define PAGING_ADDR_FPN_LOBIT NBITS(PAGING_PAGESZ)
+#define PAGING_ADDR_FPN_LOBIT 0//NBITS(PAGING_PAGESZ)
 #define PAGING_ADDR_FPN_HIBIT (NBITS(PAGING_MEMRAMSZ) - 1)
 
 /* SWAPFPN */
@@ -160,6 +160,7 @@ int print_list_pgn(struct pgn_t *ip);
 int print_pgtbl(struct pcb_t *ip, uint32_t start, uint32_t end);
 
 #ifdef FIFO_STRUCT
+int find_vic_rework(uint32_t* vicdes);
 int enlist_global_fifo(struct pcb_t *caller, int pgn);
 struct fifo_list * get_fifo();
 void set_fifo();

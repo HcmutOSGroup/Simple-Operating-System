@@ -106,7 +106,6 @@ int vmap_page_range(struct pcb_t *caller,           // process call
   struct framephy_struct *fpit;
   int pgn = PAGING_PGN(addr);
   ret_rg->rg_end = ret_rg->rg_start = addr; // at least the very first space is usable
-
   fpit = frames;
 
   /* TODO map range of frame to address space
@@ -124,7 +123,6 @@ int vmap_page_range(struct pcb_t *caller,           // process call
      * Enqueue new usage page */
     enlist_pgn_node(&caller->mm->fifo_pgn, i);
 #ifdef FIFO_STRUCT
-    printf("\tMATCH RAM at frame: %d\n", i);
     enlist_global_fifo(caller, i);
 #endif
   }
@@ -164,18 +162,22 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
     { // ERROR CODE of obtaining somes but not enough frames
       // Manage victim
 #ifdef FIFO_STRUCT
-      find_victim_page(&vicpgn, &caller);
+      struct pcb_t *vic_caller;
+      find_victim_page(&vicpgn, &vic_caller);
+      vicpte = vic_caller->mm->pgd[vicpgn];
+      vicfpn = PAGING_FPN(vicpte);
 #else
       find_victim_page(caller->mm, &vicpgn);
-#endif
       vicpte = caller->mm->pgd[vicpgn];
       vicfpn = PAGING_FPN(vicpte);
+#endif
+
       // Manage frame in swap
       MEMPHY_get_freefp(caller->active_mswp, &swpfpn);
       // copy vic to swap
       __swap_cp_page(caller->mram, vicfpn, caller->active_mswp, swpfpn);
       // update page table
-      pte_set_swap_alternative(&caller->mm->pgd[vicpgn], swpfpn);
+      pte_set_swap_alternative(&vic_caller->mm->pgd[vicpgn], swpfpn);
       // obtain frame
       struct framephy_struct *cur_fp = malloc(sizeof(struct framephy_struct));
       cur_fp->fpn = vicfpn;
@@ -199,7 +201,6 @@ int vm_map_ram(struct pcb_t *caller, int astart, int aend, int mapstart, int inc
 {
   struct framephy_struct *frm_lst = NULL;
   int ret_alloc;
-
   /*@bksysnet: author provides a feasible solution of getting frames
    *FATAL logic in here, wrong behaviour if we have not enough page
    *i.e. we request 1000 frames meanwhile our RAM has size of 3 frames
@@ -261,6 +262,12 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller)
   struct vm_area_struct *vma = malloc(sizeof(struct vm_area_struct));
 
   mm->pgd = malloc(PAGING_MAX_PGN * sizeof(uint32_t));
+  for (int i = 0; i < PAGING_MAX_SYMTBL_SZ; i++)
+  {
+    mm->symrgtbl[i].rg_start = -1;
+    mm->symrgtbl[i].rg_end = -1;
+    mm->symrgtbl[i].rg_next = 0;
+  }
 
   /* By default the owner comes with at least one vma */
   vma->vm_id = 1;
@@ -425,6 +432,29 @@ int print_pgtbl(struct pcb_t *caller, uint32_t start, uint32_t end)
 }
 
 #ifdef FIFO_STRUCT
+int find_vic_rework(uint32_t *vicdes)
+{
+  return 0;
+  struct fifo_list *temp = get_fifo();
+  if (temp == NULL)
+  {
+    return -1;
+  }
+  if (temp->next_fifo == 0)
+  {
+    *vicdes = temp->caller->mm->pgd[temp->pgn];
+    free(temp);
+    set_fifo();
+    while (temp->next_fifo != NULL && temp->next_fifo->next_fifo != NULL)
+    {
+      temp = temp->next_fifo;
+    }
+    *vicdes = temp->caller->mm->pgd[temp->pgn];
+    free(temp->next_fifo);
+    temp->next_fifo = NULL;
+    return 0;
+  }
+};
 int enlist_global_fifo(struct pcb_t *caller, int pgn)
 {
   struct fifo_list *temp = malloc(sizeof(struct fifo_list));

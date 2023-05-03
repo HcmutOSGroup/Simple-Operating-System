@@ -146,7 +146,6 @@ int MEMPHY_get_freefp(struct memphy_struct *mp, int *retfpn)
       return -1;
 
    *retfpn = fp->fpn;
-   //printf("\tTest get mem: %d\n", fp->fpn);
    mp->free_fp_list = fp->fp_next;
 
    /* MEMPHY is iteratively used up until its exhausted
