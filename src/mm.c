@@ -264,7 +264,7 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller)
 {
   struct vm_area_struct *vma = malloc(sizeof(struct vm_area_struct));
 
-  mm->pgd = malloc(PAGING_MAX_PGN * sizeof(uint32_t));
+  mm->pgd = malloc(10 * PAGING_MAX_PGN * sizeof(uint32_t));
   for (int i = 0; i < PAGING_MAX_SYMTBL_SZ; i++)
   {
     mm->symrgtbl[i].rg_start = -1;

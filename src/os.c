@@ -233,6 +233,7 @@ int main(int argc, char *argv[])
 {
 
 	/* Read config */
+	printf("%d", PAGING_MAX_PGN);
 	if (argc != 2)
 	{
 		printf("Usage: os [path to configure file]\n");
