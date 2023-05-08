@@ -61,7 +61,7 @@ int init_pte(uint32_t *pte,
 int pte_set_swap(uint32_t *pte, int swptyp, int swpoff)
 {
   SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
-  SETBIT(*pte, PAGING_PTE_SWAPPED_MASK);
+  CLRBIT(*pte, PAGING_PTE_SWAPPED_MASK);
 
   SETVAL(*pte, swptyp, PAGING_PTE_SWPTYP_MASK, PAGING_PTE_SWPTYP_LOBIT);
   SETVAL(*pte, swpoff, PAGING_PTE_SWPOFF_MASK, PAGING_PTE_SWPOFF_LOBIT);
@@ -70,7 +70,7 @@ int pte_set_swap(uint32_t *pte, int swptyp, int swpoff)
 }
 int pte_set_swap_alternative(uint32_t *pte, int swpoff)
 {
-  SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
+  CLRBIT(*pte, PAGING_PTE_PRESENT_MASK);
   SETBIT(*pte, PAGING_PTE_SWAPPED_MASK);
 
   SETVAL(*pte, swpoff, PAGING_PTE_SWPOFF_MASK, PAGING_PTE_SWPOFF_LOBIT);
@@ -150,7 +150,7 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
   if (req_pgnum > caller->mram->maxsz)
   {
     // not enough RAM
-    return -1;
+    return -3000;
   }
   for (pgit = 0; pgit < req_pgnum; pgit++)
   {
