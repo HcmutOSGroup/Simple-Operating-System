@@ -249,6 +249,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
       // pte_set_fpn() & mm->pgd[pgn];
       pte_set_fpn(&mm->pgd[pgn], vicfpn);
 
+
       // enlist freefp in memphy
       MEMPHY_put_freefp(caller->active_mswp, tgtfpn);
 
@@ -454,6 +455,7 @@ struct vm_rg_struct *get_vm_area_node_at_brk(struct pcb_t *caller, int vmaid, in
  */
 int validate_overlap_vm_area(struct pcb_t *caller, int vmaid, int vmastart, int vmaend)
 {
+  /* TODO validate the planned memory area is not overlapped */
   struct vm_area_struct *vma = caller->mm->mmap;
   while (vma)
   {
@@ -463,7 +465,6 @@ int validate_overlap_vm_area(struct pcb_t *caller, int vmaid, int vmastart, int 
     vma = vma->vm_next;
   }
 
-  /* TODO validate the planned memory area is not overlapped */
 
   return 0;
 }
