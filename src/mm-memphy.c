@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-static pthread_mutex_t memphy_lock;
+//static pthread_mutex_t memphy_lock;
 
 /*
  *  MEMPHY_mv_csr - move MEMPHY cursor
@@ -143,7 +143,8 @@ int MEMPHY_format(struct memphy_struct *mp, int pagesz)
 
 int MEMPHY_get_freefp(struct memphy_struct *mp, int *retfpn)
 {
-   pthread_mutex_lock(&memphy_lock);
+   //LOCK CRITICAL SECTION
+   //pthread_mutex_lock(&memphy_lock);
    struct framephy_struct *fp = mp->free_fp_list;
 
    if (fp == NULL)
@@ -151,7 +152,9 @@ int MEMPHY_get_freefp(struct memphy_struct *mp, int *retfpn)
 
    *retfpn = fp->fpn;
    mp->free_fp_list = fp->fp_next;
-   pthread_mutex_unlock(&memphy_lock);
+
+   //UNLOCK CRITICAL SECTION
+   //pthread_mutex_unlock(&memphy_lock);
 
    /* MEMPHY is iteratively used up until its exhausted
     * No garbage collector acting then it not been released
@@ -173,7 +176,8 @@ int MEMPHY_dump(struct memphy_struct *mp)
 
 int MEMPHY_put_freefp(struct memphy_struct *mp, int fpn)
 {
-   pthread_mutex_lock(&memphy_lock);
+   //LOCK CRITICAL SECTION
+   //pthread_mutex_lock(&memphy_lock);
    struct framephy_struct *fp = mp->free_fp_list;
    struct framephy_struct *newnode = malloc(sizeof(struct framephy_struct));
 
@@ -181,7 +185,9 @@ int MEMPHY_put_freefp(struct memphy_struct *mp, int fpn)
    newnode->fpn = fpn;
    newnode->fp_next = fp;
    mp->free_fp_list = newnode;
-   pthread_mutex_unlock(&memphy_lock);
+
+   //UNLOCK CRITICAL SECTION
+   //pthread_mutex_unlock(&memphy_lock);
 
    return 0;
 }
